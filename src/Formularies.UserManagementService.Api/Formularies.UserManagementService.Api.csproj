@@ -12,4 +12,9 @@
     <Folder Include="V2\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Formularies.UserManagementService.Core\Formularies.UserManagementService.Core.csproj" />
+    <ProjectReference Include="..\Formularies.UserManagementService.Infrastructure\Formularies.UserManagementService.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
