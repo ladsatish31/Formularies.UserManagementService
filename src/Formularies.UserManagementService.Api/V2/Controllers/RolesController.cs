@@ -8,10 +8,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Formularies.UserManagementService.Api.V1.Controllers
+namespace Formularies.UserManagementService.Api.V2.Controllers
 {
-    [Route("api/"+ ApiConstants.ServiceName +"/v{api-version:apiVersion}/[controller]")]
-    [ApiVersion("1.0")]
+    [Route("api/" + ApiConstants.ServiceName + "/v{api-version:apiVersion}/[controller]")]
+    [ApiVersion("2.0")]
     [ApiController]
     public class RolesController : ControllerBase
     {

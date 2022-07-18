@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using System;
 using System.IO;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Formularies.UserManagementService.Api
 {
@@ -14,29 +16,75 @@ namespace Formularies.UserManagementService.Api
             {
                 throw new ArgumentNullException(nameof(services));
             }
-            string serviceDescription = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"ServiceDescription.md"));
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Formularies.UserManagementService.Api", Version = "v1",Description=serviceDescription });
-                string xmlFile =$"{typeof(SwaggerConfiguration).Assembly.GetName().Name}.xml";
-                c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory,xmlFile));
-                c.CustomOperationIds(e => $"{e.ActionDescriptor.RouteValues["controller"]}_{e.ActionDescriptor.RouteValues["action"]}");
+            services.AddVersionedApiExplorer(Options =>
+            {               
+                Options.AssumeDefaultVersionWhenUnspecified = true;
+                Options.DefaultApiVersion = new ApiVersion(1, 0);
+                Options.GroupNameFormat = "'v'VVV";
+                Options.SubstituteApiVersionInUrl = true;
             });
+            services.AddApiVersioning(options =>
+            {
+                options.ReportApiVersions = true;
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                options.DefaultApiVersion = new ApiVersion(1, 0);
+            });
+            //string serviceDescription = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"ServiceDescription.md"));
+            services.AddSwaggerGen(
+                options =>
+                {
+                    options.EnableAnnotations();
+                    IApiVersionDescriptionProvider provider = services.BuildServiceProvider().GetRequiredService<IApiVersionDescriptionProvider>();
+                    foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
+                    {
+                        options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
+                    }
+                    string xmlFile = $"{typeof(SwaggerConfiguration).Assembly.GetName().Name}.xml";
+                    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFile));
+                    options.CustomOperationIds(e => $"{e.ActionDescriptor.RouteValues["controller"]}_{e.ActionDescriptor.RouteValues["action"]}");
+                });            
 
             return services;
         }
 
-        public static IApplicationBuilder ConfigureSwagger(this IApplicationBuilder app)
+        public static IApplicationBuilder ConfigureSwagger(this IApplicationBuilder app,IApiVersionDescriptionProvider provider)
         {
             if (app == null)
             {
                 throw new ArgumentNullException(nameof(app));
             }
 
-            app.UseSwagger();
-            app.UseSwaggerUI(c=>c.SwaggerEndpoint("/swagger/v1/swagger.json", "Formularies.UserManagementService v1"));
+            app.UseSwagger(options=> options.RouteTemplate=$"swagger/{ApiConstants.ServiceName}/{{documentName}}/swagger.json");
+            app.UseSwaggerUI(options =>
+            {
+                options.RoutePrefix = $"swagger/{ApiConstants.ServiceName}";
+
+                foreach(ApiVersionDescription description in provider.ApiVersionDescriptions)
+                {
+                    options.SwaggerEndpoint($"{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+                }
+
+            });
+            //app.UseSwaggerUI(c=>c.SwaggerEndpoint("/swagger/v1/swagger.json", "Formularies.UserManagementService v1"));
 
             return app;
+        }
+
+        private static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
+        {
+            string serviceDescription = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "ServiceDescription.md"));
+            var info = new OpenApiInfo
+            {
+                Title = $"{ApiConstants.FriendlyServiceName} API {description.ApiVersion}",
+                Version = description.ApiVersion.ToString(),
+                Description = serviceDescription
+            };
+
+            if(description.IsDeprecated)
+            {
+                info.Description += $"{Environment.NewLine} This Api version has been deprecated";
+            }
+            return info;
         }
     }
 }
