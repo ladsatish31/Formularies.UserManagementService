@@ -1,3 +1,4 @@
+using Formularies.UserManagementService.Api.Middlewares;
 using Formularies.UserManagementService.Core.Interfaces.Repositories;
 using Formularies.UserManagementService.Core.Interfaces.Services;
 using Formularies.UserManagementService.Core.Services;
@@ -32,7 +33,11 @@ namespace Formularies.UserManagementService.Api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
+            var connectionString = Configuration.GetConnectionString("DefaultConnection");
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+            });          
             services.AddControllers();
             services.ConfigureCors();
             services.ConfigureSwagger();
@@ -46,8 +51,13 @@ namespace Formularies.UserManagementService.Api
         {
             if (env.IsDevelopment())
             {
-                app.UseDeveloperExceptionPage();
-                
+                //app.UseDeveloperExceptionPage();
+                app.HttpCodeAndLogMiddleware();
+            }
+            else
+            {
+                app.HttpCodeAndLogMiddleware();
+                app.UseHsts();
             }
             app.ConfigureSwagger();
             app.UseHttpsRedirection();

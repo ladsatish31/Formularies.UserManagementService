@@ -8,21 +8,21 @@ namespace Formularies.UserManagementService.Infrastructure.Context
     {
         public AppDbContext(DbContextOptions<AppDbContext> option):base(option)
         {
-            SeedData();
+            
         }
         public virtual DbSet<Role> Roles { get; set; }
 
-        private void SeedData()
-        {
-            var roles = new List<Role>()
-            {
-                new Role() { RoleId = 1,RoleName = "Super_Admin",RoleDescription="Super Admin", CreatedBy="lad.satish1@gmail.com"},
-                new Role() { RoleId = 2,RoleName = "Admin",RoleDescription="Admin", CreatedBy="lad.satish1@gmail.com"},
-                new Role() { RoleId = 3,RoleName = "Analyst",RoleDescription="Analyst", CreatedBy="lad.satish1@gmail.com"},
-                new Role() { RoleId = 4,RoleName = "Reviewer",RoleDescription="Reviewer", CreatedBy="lad.satish1@gmail.com"}
-            };
-            Roles.AddRange(roles);
-            SaveChanges();
-        }
+        //private void SeedData()
+        //{
+        //    var roles = new List<Role>()
+        //    {
+        //        new Role() { RoleId = 1,RoleName = "Super_Admin",RoleDescription="Super Admin", CreatedBy="lad.satish1@gmail.com"},
+        //        new Role() { RoleId = 2,RoleName = "Admin",RoleDescription="Admin", CreatedBy="lad.satish1@gmail.com"},
+        //        new Role() { RoleId = 3,RoleName = "Analyst",RoleDescription="Analyst", CreatedBy="lad.satish1@gmail.com"},
+        //        new Role() { RoleId = 4,RoleName = "Reviewer",RoleDescription="Reviewer", CreatedBy="lad.satish1@gmail.com"}
+        //    };
+        //    Roles.AddRange(roles);
+        //    SaveChanges();
+        //}
     }
 }
