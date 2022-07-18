@@ -1,7 +1,13 @@
+using Formularies.UserManagementService.Core.Interfaces.Repositories;
+using Formularies.UserManagementService.Core.Interfaces.Services;
+using Formularies.UserManagementService.Core.Services;
+using Formularies.UserManagementService.Infrastructure.Context;
+using Formularies.UserManagementService.Infrastructure.Respositories;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -28,10 +34,11 @@ namespace Formularies.UserManagementService.Api
         {
 
             services.AddControllers();
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Formularies.UserManagementService", Version = "v1" });
-            });
+            services.ConfigureCors();
+            services.ConfigureSwagger();
+            services.ConfigureDependencyInjection(Configuration);
+            services.AddAutoMapper(typeof(Startup));
+            services.AddRouting(option=>option.LowercaseUrls=true);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -40,10 +47,9 @@ namespace Formularies.UserManagementService.Api
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Formularies.UserManagementService v1"));
+                
             }
-
+            app.ConfigureSwagger();
             app.UseHttpsRedirection();
 
             app.UseRouting();
