@@ -80,9 +80,8 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             }
             _dbcontext.Entry(roleToUpdate).State= EntityState.Modified;
             roleToUpdate.RoleName = role.RoleName;
-            roleToUpdate.RoleDescription = role.RoleDescription;
-            roleToUpdate.CreatedBy = role.CreatedBy;
-            roleToUpdate.CreatedDate = DateTime.UtcNow;
+            roleToUpdate.RoleDescription = role.RoleDescription;           
+            roleToUpdate.UpdatedDate = DateTime.UtcNow;
             if(role!=null)
             {
                 _dbcontext.Roles.Update(roleToUpdate);

@@ -12,132 +12,124 @@ namespace Formularies.UserManagementService.Api.V1.Controllers
     [Route("api/" + ApiConstants.ServiceName + "/v{api-version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
     [ApiController]
-    public class RolesController : ControllerBase
+    public class UsersController : ControllerBase
     {
-        private readonly IRoleService _roleService;
+        private readonly IUserService _userService;
 
-        public RolesController(IRoleService roleService)
+        public UsersController(IUserService userService)
         {
-            _roleService = roleService ?? throw new ArgumentNullException(nameof(roleService));            
+            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
         }
 
         /// <summary>
-        /// Get all the roles
+        /// Get all the users
         /// </summary>
-        /// <returns>Roles</returns>
+        /// <returns>Users</returns>
         /// <remarks>
-        /// Tables used => Roles
+        /// Tables used => Users
         /// </remarks>
-        [HttpGet(Name = "GetRoles")]
+        [HttpGet(Name = "GetUsers")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<Role>>> GetRoles()
+        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
-            var response = await _roleService.GetAllRoles().ConfigureAwait(false);
+            var response = await _userService.GetAllUsers().ConfigureAwait(false);
             return response != null ? Ok(response) : NotFound();
         }
 
         /// <summary>
-        /// Get role by id
+        /// Get user by id
         /// </summary>
         /// <param name="id"></param>
-        /// <returns>Role</returns>
+        /// <returns>User</returns>
         /// <remarks>
-        /// Tables used => Roles
+        /// Tables used => Users
         /// </remarks>
-        [HttpGet("{id}", Name = "GetRoleById")]
+        [HttpGet("{id}", Name = "GetUserById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<Role>> GetRoleById(int id)
-        {
-            if (id <= 0)
-            {
-                return BadRequest();
-            }
-            var response = await _roleService.GetRoleById(id).ConfigureAwait(false);
+        public async Task<ActionResult<User>> GetUserById(Guid id)
+        {            
+            var response = await _userService.GetUserById(id).ConfigureAwait(false);
             return response != null ? Ok(response) : NotFound();
 
         }
 
         /// <summary>
-        /// Create role
+        /// Create user
         /// </summary>
-        /// <param name="role"></param>
-        /// <returns>Role</returns>
+        /// <param name="User"></param>
+        /// <returns>User</returns>
         /// <remarks>
-        /// Tables used => Roles
+        /// Tables used => Users
         /// </remarks>
         /// <response code="201">Returns the newly created item</response>
         /// <response code="400">If the item is null</response>
-        [HttpPost(Name = "CreateRole")]
+        [HttpPost(Name = "CreateUser")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<Role>> CreateRole(Role role)
+        public async Task<ActionResult<User>> CreateUser(User User)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
-            var response = await _roleService.CreateRole(role).ConfigureAwait(false);
-            return CreatedAtRoute(nameof(GetRoleById), new { id = response.RoleId }, response);
+            var response = await _userService.CreateUser(User).ConfigureAwait(false);
+            return CreatedAtRoute(nameof(GetUserById), new { id = response.UserId }, response);
         }
 
         /// <summary>
-        /// Delete Role
+        /// Delete user
         /// </summary>
         /// <param name="id"></param>
         /// <returns>true/false</returns>
         /// <remarks>
-        /// Tables used => Roles
+        /// Tables used => Users
         /// </remarks>
-        [HttpDelete("{id}", Name = "DeleteRole")]
+        [HttpDelete("{id}", Name = "DeleteUser")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<bool>> DeleteRole(int id)
-        {
-            if (id <= 0)
-            {
-                return BadRequest();
-            }
-            var response = await _roleService.DeleteRole(id).ConfigureAwait(false);
+        public async Task<ActionResult<bool>> DeleteUser(Guid id)
+        {           
+            var response = await _userService.DeleteUser(id).ConfigureAwait(false);
             return response ? NoContent() : NotFound();
         }
 
         /// <summary>
-        /// Update role
+        /// Update user
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="role"></param>
+        /// <param name="User"></param>
         /// <returns>true/false</returns>
         /// <remarks>
-        /// Tables used => Roles
+        /// Tables used => Users
         /// </remarks>
-        [HttpPut("{id}", Name = "UpdateRole")]
+        [HttpPut("{id}", Name = "UpdateUser")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<bool>> UpdateRole(int id, Role role)
+        public async Task<ActionResult<bool>> UpdateUser(Guid id, User User)
         {
-            if (!ModelState.IsValid || id <= 0)
+            if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
-            var response = await _roleService.UpdateRole(id, role).ConfigureAwait(false);
+            var response = await _userService.UpdateUser(id, User).ConfigureAwait(false);
             return response ? Ok(response) : NotFound();
         }
     }
