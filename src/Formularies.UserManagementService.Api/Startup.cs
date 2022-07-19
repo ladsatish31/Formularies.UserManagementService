@@ -18,7 +18,9 @@ using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Newtonsoft;
 
 namespace Formularies.UserManagementService.Api
 {
@@ -38,8 +40,13 @@ namespace Formularies.UserManagementService.Api
             services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
-            });          
-            services.AddControllers();
+            });
+            //services.AddControllers().AddNewtonsoftJson(options =>
+            //{
+            //    options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+            //});
+            services.AddControllers()
+            .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
             services.ConfigureCors();
             services.ConfigureSwagger();
             services.ConfigureDependencyInjection(Configuration);

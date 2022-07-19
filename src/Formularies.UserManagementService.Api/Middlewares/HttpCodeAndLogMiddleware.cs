@@ -47,7 +47,7 @@ namespace Formularies.UserManagementService.Api.Middlewares
 
                 switch (exception)
                 {
-                    case ApiException e:
+                    case BadHttpRequestException e:
                         httpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                         await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "BadRequest Exception!" + e.Message);
                         break;
@@ -59,9 +59,9 @@ namespace Formularies.UserManagementService.Api.Middlewares
                         httpContext.Response.StatusCode = (int)HttpStatusCode.UnprocessableEntity;
                         await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "Validation Exception!" + e.Message);
                         break;
-                    case AuthenticationException e:
+                    case UnauthorizedAccessException e:
                         httpContext.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                        await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "Authentication Exception!" + e.Message);
+                        await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "UnauthorizedAccessException!" + e.Message);
                         break;
                     default:
                         await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.InternalServerError, LogLevel.Error, "Server error!");
@@ -78,12 +78,13 @@ namespace Formularies.UserManagementService.Api.Middlewares
             string alternateMassaage = null)
         {
             string requestBody = string.Empty;
-            if (httpContext.Request.Body.CanSeek)
+            if (httpContext.Request.Body.CanSeek && httpContext.Request.Body.Length>0)
             {
                 httpContext.Request.Body.Seek(0, System.IO.SeekOrigin.Begin);
                 using (var sr = new System.IO.StreamReader(httpContext.Request.Body))
                 {
-                    requestBody = JsonConvert.SerializeObject(sr.ReadToEndAsync());
+                    var streamOutput=sr.ReadToEndAsync();
+                    requestBody = JsonConvert.DeserializeObject(streamOutput.Result).ToString();
                 }
             }
             StringValues authorization;
@@ -113,7 +114,9 @@ namespace Formularies.UserManagementService.Api.Middlewares
             string responseMessage = JsonConvert.SerializeObject(
                 new
                 {
-                    Message = string.IsNullOrWhiteSpace(exception.Message) ? alternateMassaage : exception.Message
+                    Message = string.IsNullOrWhiteSpace(exception.Message) ? alternateMassaage : exception.Message,
+                    StatusCode = (int)httpStatusCode,
+                    TimeStamp = DateTime.UtcNow
                 });
             httpContext.Response.Clear();
             httpContext.Response.ContentType = System.Net.Mime.MediaTypeNames.Application.Json;

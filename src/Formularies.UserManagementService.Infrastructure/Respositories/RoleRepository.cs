@@ -23,28 +23,73 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
 
         public async Task<Role> CreateRole(Role role)
         {
-            throw new NotImplementedException();
+            var dbRole=_mapper.Map<Entities.Role>(role);
+            await _dbcontext.Roles.AddAsync(dbRole);
+            await _dbcontext.SaveChangesAsync();
+            role.RoleId = dbRole.RoleId;
+            return role;
         }
 
         public async Task<bool> DeleteRole(int id)
         {
-            throw new NotImplementedException();
+           var roleToDelete=await _dbcontext.Roles.FindAsync(id);
+            if(roleToDelete == null)
+            {
+                return false;
+            }
+            if(roleToDelete != null)
+            {
+                _dbcontext.Entry(roleToDelete).State= EntityState.Modified;
+                _dbcontext.Roles.Remove(roleToDelete);
+                await _dbcontext.SaveChangesAsync();
+                return true;
+            }
+            return false;
         }
 
         public async Task<IEnumerable<Role>> GetAllRoles()
         {
-            var role = await _dbcontext.Roles.ToListAsync().ConfigureAwait(false);
-            return _mapper.Map<IEnumerable<Role>>(role);
+            var dbRoles = await _dbcontext.Roles.ToListAsync().ConfigureAwait(false);
+            if (dbRoles != null)
+            {
+                return _mapper.Map<IEnumerable<Role>>(dbRoles);
+            }
+            return null;
         }
 
         public async Task<Role> GetRoleById(int id)
         {
-            throw new NotImplementedException();
+           var dbRole=await _dbcontext.Roles.FindAsync(id);
+            if (dbRole != null)
+            {
+                return _mapper.Map<Role>(dbRole);
+            }
+            return null;
         }
 
         public async Task<bool> UpdateRole(int id, Role role)
         {
-            throw new NotImplementedException();
+            var roleToUpdate=await _dbcontext.Roles.FindAsync(id);
+            if(roleToUpdate == null)
+            {
+                return false;
+            }
+            if (roleToUpdate == null||roleToUpdate.RoleId!=id)
+            {
+                return false;
+            }
+            _dbcontext.Entry(roleToUpdate).State= EntityState.Modified;
+            roleToUpdate.RoleName = role.RoleName;
+            roleToUpdate.RoleDescription = role.RoleDescription;
+            roleToUpdate.CreatedBy = role.CreatedBy;
+            roleToUpdate.CreatedDate = DateTime.UtcNow;
+            if(role!=null)
+            {
+                _dbcontext.Roles.Update(roleToUpdate);
+                await _dbcontext.SaveChangesAsync();
+                return true;
+            }
+            return false;
         }
     }
 }

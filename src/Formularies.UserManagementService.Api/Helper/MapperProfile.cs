@@ -5,7 +5,7 @@ namespace Formularies.UserManagementService.Api.Helper
     {
         public MapperProfile()
         {
-            CreateMap<Infrastructure.Entities.Role, Core.Models.Role>();
+            CreateMap<Infrastructure.Entities.Role, Core.Models.Role>().ReverseMap();
         }
     }
 }
