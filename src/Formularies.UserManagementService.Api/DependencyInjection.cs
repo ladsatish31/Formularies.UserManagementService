@@ -26,7 +26,8 @@ namespace Formularies.UserManagementService.Api
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();            
+            services.AddScoped<IEmailService, EmailService>();
 
             return services;
         }

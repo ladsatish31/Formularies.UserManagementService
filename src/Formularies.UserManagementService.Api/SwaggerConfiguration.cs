@@ -17,7 +17,7 @@ namespace Formularies.UserManagementService.Api
                 throw new ArgumentNullException(nameof(services));
             }
             services.AddVersionedApiExplorer(Options =>
-            {               
+            {
                 Options.AssumeDefaultVersionWhenUnspecified = true;
                 Options.DefaultApiVersion = new ApiVersion(1, 0);
                 Options.GroupNameFormat = "'v'VVV";
@@ -28,8 +28,7 @@ namespace Formularies.UserManagementService.Api
                 options.ReportApiVersions = true;
                 options.AssumeDefaultVersionWhenUnspecified = true;
                 options.DefaultApiVersion = new ApiVersion(1, 0);
-            });
-            //string serviceDescription = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"ServiceDescription.md"));
+            });            
             services.AddSwaggerGen(
                 options =>
                 {
@@ -42,24 +41,44 @@ namespace Formularies.UserManagementService.Api
                     string xmlFile = $"{typeof(SwaggerConfiguration).Assembly.GetName().Name}.xml";
                     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFile));
                     options.CustomOperationIds(e => $"{e.ActionDescriptor.RouteValues["controller"]}_{e.ActionDescriptor.RouteValues["action"]}");
-                });            
+                    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                    {
+                        Name = "Authorization",
+                        Type = SecuritySchemeType.Http,
+                        Scheme = "Bearer",
+                        BearerFormat = "JWT",
+                        In = ParameterLocation.Header,
+                        Description = "JWT Authorization header using the Bearer scheme."
+                    });
+                    options.AddSecurityRequirement(new OpenApiSecurityRequirement {
+                {
+                    new OpenApiSecurityScheme {
+                    Reference = new OpenApiReference {
+                        Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                    }
+                },
+                new string[] {}
+                }
+            });
+                });
 
             return services;
         }
 
-        public static IApplicationBuilder ConfigureSwagger(this IApplicationBuilder app,IApiVersionDescriptionProvider provider)
+        public static IApplicationBuilder ConfigureSwagger(this IApplicationBuilder app, IApiVersionDescriptionProvider provider)
         {
             if (app == null)
             {
                 throw new ArgumentNullException(nameof(app));
             }
 
-            app.UseSwagger(options=> options.RouteTemplate=$"swagger/{ApiConstants.ServiceName}/{{documentName}}/swagger.json");
+            app.UseSwagger(options => options.RouteTemplate = $"swagger/{ApiConstants.ServiceName}/{{documentName}}/swagger.json");
             app.UseSwaggerUI(options =>
             {
                 options.RoutePrefix = $"swagger/{ApiConstants.ServiceName}";
 
-                foreach(ApiVersionDescription description in provider.ApiVersionDescriptions)
+                foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
                 {
                     options.SwaggerEndpoint($"{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
                 }
@@ -80,7 +99,7 @@ namespace Formularies.UserManagementService.Api
                 Description = serviceDescription
             };
 
-            if(description.IsDeprecated)
+            if (description.IsDeprecated)
             {
                 info.Description += $"{Environment.NewLine} This Api version has been deprecated";
             }

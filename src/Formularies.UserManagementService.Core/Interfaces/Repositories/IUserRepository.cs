@@ -14,5 +14,7 @@ namespace Formularies.UserManagementService.Core.Interfaces.Repositories
         Task<User> CreateUser(User user);
         Task<bool> DeleteUser(Guid id);
         Task<bool> UpdateUser(Guid id, User user);
+        Task<User> GetUserByEmail(string email);
+        Task<User> GetUserByResetToken(string token);
     }
 }

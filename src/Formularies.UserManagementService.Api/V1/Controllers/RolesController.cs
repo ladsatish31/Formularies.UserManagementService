@@ -1,5 +1,6 @@
 ﻿using Formularies.UserManagementService.Core.Interfaces.Services;
 using Formularies.UserManagementService.Core.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -12,9 +13,11 @@ namespace Formularies.UserManagementService.Api.V1.Controllers
     [Route("api/" + ApiConstants.ServiceName + "/v{api-version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
     [ApiController]
+    //[Authorize]
     public class RolesController : ControllerBase
     {
         private readonly IRoleService _roleService;
+        public new User User => (User)HttpContext.Items["User"];
 
         public RolesController(IRoleService roleService)
         {

@@ -49,7 +49,7 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
         public async Task<IEnumerable<User>> GetAllUsers()
         {
             var dbUsers = await _dbcontext.Users.ToListAsync().ConfigureAwait(false);
-            if (dbUsers.Count>0)
+            if (dbUsers.Count > 0)
             {
                 return _mapper.Map<IEnumerable<User>>(dbUsers);
             }
@@ -68,6 +68,7 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
 
         public async Task<bool> UpdateUser(Guid id, User user)
         {
+            var updatedUser = _mapper.Map<Entities.User>(user);
             var userToUpdate = await _dbcontext.Users.FindAsync(id);
             if (userToUpdate == null)
             {
@@ -77,12 +78,17 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             {
                 return false;
             }
-            _dbcontext.Entry(userToUpdate).State = EntityState.Modified;
-            userToUpdate.Name = user.Name;
-            userToUpdate.Email = user.Email;
-            userToUpdate.IsActive = user.IsActive;
-            userToUpdate.RoleId = user.RoleId;
-            userToUpdate.UpdatedDate = DateTime.UtcNow;
+            _dbcontext.Entry(userToUpdate).State = EntityState.Modified;           
+            userToUpdate.Name = updatedUser.Name;
+            userToUpdate.Email = updatedUser.Email;
+            userToUpdate.IsActive = updatedUser.IsActive;
+            userToUpdate.RoleId = updatedUser.RoleId;
+            userToUpdate.UpdatedDate = DateTime.Now;
+            userToUpdate.ResetToken = updatedUser.ResetToken;
+            userToUpdate.ResetTokenExpiryDate = updatedUser.ResetTokenExpiryDate;
+            userToUpdate.PasswordHash = updatedUser.PasswordHash;
+            userToUpdate.PasswordResetDate = updatedUser.PasswordResetDate;
+            userToUpdate.RefreshTokens = updatedUser.RefreshTokens;
             if (userToUpdate != null)
             {
                 _dbcontext.Users.Update(userToUpdate);
@@ -91,5 +97,28 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             }
             return false;
         }
+
+        public async Task<User> GetUserByEmail(string email)
+        {
+            var dbUser = await _dbcontext.Users.SingleOrDefaultAsync(x => x.Email == email);
+            if (dbUser != null)
+            {
+                return _mapper.Map<User>(dbUser);
+            }
+            return null;
+        }
+
+        public async Task<User> GetUserByResetToken(string token)
+        {
+            var dbUser = await _dbcontext.Users.SingleOrDefaultAsync(x =>
+                x.ResetToken == token &&
+                x.ResetTokenExpiryDate > DateTime.Now);
+            if (dbUser != null)
+            {
+                return _mapper.Map<User>(dbUser);
+            }
+            return null;
+        }
+
     }
 }

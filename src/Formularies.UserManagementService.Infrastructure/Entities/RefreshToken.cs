@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace Formularies.UserManagementService.Infrastructure.Entities
 {
+    [Owned]
     public class RefreshToken
     {
 
@@ -20,6 +22,6 @@ namespace Formularies.UserManagementService.Infrastructure.Entities
         [Required]
         public DateTime CreatedDate { get; set; }        
         public string CreatedByIp { get; set; }
-        public bool IsExpired => DateTime.UtcNow >= ExpiryDate;
+        public bool IsExpired => DateTime.Now >= ExpiryDate;
     }
 }

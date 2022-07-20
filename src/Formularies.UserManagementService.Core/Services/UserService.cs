@@ -1,12 +1,23 @@
-﻿using Formularies.UserManagementService.Core.Interfaces.Repositories;
+﻿using AutoMapper;
+using Formularies.UserManagementService.Core.Constants;
+using Formularies.UserManagementService.Core.Exception;
+using Formularies.UserManagementService.Core.Interfaces.Repositories;
 using Formularies.UserManagementService.Core.Interfaces.Services;
 using Formularies.UserManagementService.Core.Models;
+using Formularies.UserManagementService.Core.Request;
+using Formularies.UserManagementService.Core.Response;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BC = BCrypt.Net.BCrypt;
+using System.Security.Cryptography;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 
 namespace Formularies.UserManagementService.Core.Services
 {
@@ -14,10 +25,16 @@ namespace Formularies.UserManagementService.Core.Services
     {
         public readonly IUserRepository _userRepository;
         public readonly ILogger<UserService> _logger;
-        public UserService(IUserRepository userRepository, ILogger<UserService> logger)
+        private readonly JwtConfig _jwtConfig;
+        private readonly IMapper _mapper;
+        private readonly IEmailService _emailService;
+        public UserService(IUserRepository userRepository, ILogger<UserService> logger, IOptionsMonitor<JwtConfig> optionsMonitor, IMapper mapper, IEmailService emailService)
         {
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _jwtConfig = optionsMonitor.CurrentValue ?? throw new ArgumentNullException(nameof(optionsMonitor));
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         }
         public async Task<User> CreateUser(User user)
         {
@@ -82,6 +99,162 @@ namespace Formularies.UserManagementService.Core.Services
                 _logger.LogError($"Error while trying to call UpdateUser in service class, Error message={ex}.");
                 throw;
             }
+        }
+
+        public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest authenticateRequest, string ipAddress)
+        {
+            //var users = await _userRepository.GetAllUsers();
+            var user = await _userRepository.GetUserByEmail(authenticateRequest.Email);
+            if (user == null)
+                throw new ApiException("Email does not exist");
+            else if (!user.IsActive)
+                throw new ApiException("User is not activated");
+            if (!BC.Verify(authenticateRequest.Password, user.PasswordHash))
+                throw new ApiException("Email or password is incorrect");
+
+            // authentication successful so generate jwt and refresh tokens
+            var jwtToken = GenerateJwtToken(user);
+            var refreshToken = GenerateRefreshToken(ipAddress);
+            user.RefreshTokens.Add(refreshToken);
+
+            // remove old refresh tokens from user
+            RemoveOldRefreshTokens(user);
+
+            // save changes to db
+            await _userRepository.UpdateUser(user.UserId, user);
+
+            var response = _mapper.Map<AuthenticateResponse>(user);
+            response.JwtToken = jwtToken;
+            response.RefreshToken = refreshToken.Token;
+            return response;
+        }
+
+        public async Task ForgotPassword(ForgotPasswordRequest forgotPasswordRequest, string origin)
+        {
+            //var users = await _userRepository.GetAllUsers();
+            var user = await _userRepository.GetUserByEmail(forgotPasswordRequest.Email);
+
+            // always return ok response to prevent email enumeration
+            if (user == null) throw new ApiException("Email not valid");
+
+            // create reset token that expires after 1 day
+            user.ResetToken = RandomTokenString();
+            user.ResetTokenExpiryDate = DateTime.Now.AddDays(_jwtConfig.ResetTokenExpiryTime);
+
+            await _userRepository.UpdateUser(user.UserId, user);
+
+            // send email
+            //SendPasswordResetEmail(user, origin);
+        }
+
+        public async Task<AuthenticateResponse> RefreshToken(string token, string ipAddress)
+        {
+            var (refreshToken, user) = await GetRefreshToken(token);
+
+            // replace old refresh token with a new one and save
+            var newRefreshToken = GenerateRefreshToken(ipAddress);
+            user.RefreshTokens.Add(newRefreshToken);
+
+            RemoveOldRefreshTokens(user);
+
+            await _userRepository.UpdateUser(user.UserId, user);
+
+            // generate new jwt
+            var jwtToken = GenerateJwtToken(user);
+
+            var response = _mapper.Map<AuthenticateResponse>(user);
+            response.JwtToken = jwtToken;
+            response.RefreshToken = newRefreshToken.Token;
+            return response;
+        }
+
+        public async Task ResetPassword(ResetPasswordRequest resetPasswordRequest)
+        {
+            var user = await _userRepository.GetUserByResetToken(resetPasswordRequest.Token);
+           
+            if (user == null)
+                throw new ApiException("Invalid token");
+
+            // update password and remove reset token
+            user.PasswordHash = BC.HashPassword(resetPasswordRequest.Password);
+            user.PasswordResetDate = DateTime.Now;
+            user.ResetToken = null;
+            user.ResetTokenExpiryDate = null;
+            await _userRepository.UpdateUser(user.UserId, user);
+        }
+
+        private async Task<(RefreshToken, User)> GetRefreshToken(string token)
+        {
+            var users = await _userRepository.GetAllUsers();
+            var user = users != null ? users.SingleOrDefault(u => u.RefreshTokens.Any(t => t.Token == token)) : null;
+            if (user == null) throw new ApiException("Invalid token");
+            var refreshToken = user.RefreshTokens.Single(x => x.Token == token);
+            if (refreshToken.IsExpired) throw new ApiException("Invalid token");
+            return (refreshToken, user);
+        }
+
+        private string GenerateJwtToken(User user)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_jwtConfig.Secret);
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[] { new Claim("id", user.UserId.ToString()) }),
+                Expires = DateTime.Now.Add(_jwtConfig.TokenExpiryTime),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+
+        private RefreshToken GenerateRefreshToken(string ipAddress)
+        {
+            return new RefreshToken
+            {
+                Token = RandomTokenString(),
+                ExpiryDate = DateTime.Now.AddDays(_jwtConfig.RefreshTokenExpiryTime),
+                CreatedDate = DateTime.Now,
+                CreatedByIp = ipAddress
+            };
+        }
+
+        private void RemoveOldRefreshTokens(User user)
+        {
+            user.RefreshTokens.RemoveAll(x =>
+                x.IsExpired &&
+                x.CreatedDate.AddDays(_jwtConfig.RefreshTokenTTL) <= DateTime.Now);
+        }
+
+        private string RandomTokenString()
+        {
+            using var rngCryptoServiceProvider = new RNGCryptoServiceProvider();
+            var randomBytes = new byte[40];
+            rngCryptoServiceProvider.GetBytes(randomBytes);
+            // convert random bytes to hex string
+            return BitConverter.ToString(randomBytes).Replace("-", "");
+        }
+
+        private void SendPasswordResetEmail(User user, string origin)
+        {
+            string message;
+            if (!string.IsNullOrEmpty(origin))
+            {
+                var resetUrl = $"{origin}/api/login/resetpassword?token={user.ResetToken}";
+                message = $@"<p>Please click the below link to reset your password, the link will be valid for 1 day:</p>
+                             <p><a href=""{resetUrl}"">{resetUrl}</a></p>";
+            }
+            else
+            {
+                message = $@"<p>Please use the below token to reset your password with the <code>/api/login/resetpassword</code> api route:</p>
+                             <p><code>{user.ResetToken}</code></p>";
+            }
+
+            _emailService.Send(
+                to: user.Email,
+                subject: "Reset Password",
+                html: $@"<h4>Reset Password Email</h4>
+                         {message}"
+            );
         }
     }
 }

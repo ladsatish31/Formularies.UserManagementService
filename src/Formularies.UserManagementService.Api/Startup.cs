@@ -21,6 +21,8 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Newtonsoft;
+using Formularies.UserManagementService.Core.Constants;
+using System.Text;
 
 namespace Formularies.UserManagementService.Api
 {
@@ -37,6 +39,8 @@ namespace Formularies.UserManagementService.Api
         public void ConfigureServices(IServiceCollection services)
         {
             var connectionString = Configuration.GetConnectionString("DefaultConnection");
+            services.Configure<JwtConfig>(Configuration.GetSection("JwtConfig"));
+            services.Configure<AppSettings>(Configuration.GetSection("AppSettings"));
             services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
@@ -52,6 +56,7 @@ namespace Formularies.UserManagementService.Api
             services.ConfigureDependencyInjection(Configuration);
             services.AddAutoMapper(typeof(Startup));
             services.AddRouting(option=>option.LowercaseUrls=true);
+            var key = Encoding.ASCII.GetBytes(Configuration["JwtConfig:Secret"]);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -68,11 +73,16 @@ namespace Formularies.UserManagementService.Api
                 app.UseHsts();
             }
             app.ConfigureSwagger(provider);
+            // custom jwt auth middleware
+            app.UseMiddleware<JwtMiddleware>();
             app.UseHttpsRedirection();
 
             app.UseRouting();
 
+            app.UseAuthentication();
+
             app.UseAuthorization();
+            app.UseAuthorization();            
 
             app.UseEndpoints(endpoints =>
             {

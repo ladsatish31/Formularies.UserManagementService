@@ -116,7 +116,7 @@ namespace Formularies.UserManagementService.Api.Middlewares
                 {
                     Message = string.IsNullOrWhiteSpace(exception.Message) ? alternateMassaage : exception.Message,
                     StatusCode = (int)httpStatusCode,
-                    TimeStamp = DateTime.UtcNow
+                    TimeStamp = DateTime.Now
                 });
             httpContext.Response.Clear();
             httpContext.Response.ContentType = System.Net.Mime.MediaTypeNames.Application.Json;

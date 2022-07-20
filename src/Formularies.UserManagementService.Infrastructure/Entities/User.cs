@@ -21,11 +21,13 @@ namespace Formularies.UserManagementService.Infrastructure.Entities
         public int RoleId { get; set; }        
         public string PasswordHash { get; set; }        
         public string ResetToken { get; set; }        
-        public DateTime ResetTokenExpiryDate { get; set; }       
-        public DateTime PasswordResetDate { get; set; }        
+        public DateTime? ResetTokenExpiryDate { get; set; }       
+        public DateTime? PasswordResetDate { get; set; }
+        public List<RefreshToken> RefreshTokens { get; set; }
         public string CreatedBy { get; set; }       
-        public DateTime CreatedDate { get; set; }
+        public DateTime? CreatedDate { get; set; }
         public string UpdatedBy { get; set; }
-        public DateTime UpdatedDate { get; set; }
+        public DateTime? UpdatedDate { get; set; }
+
     }
 }

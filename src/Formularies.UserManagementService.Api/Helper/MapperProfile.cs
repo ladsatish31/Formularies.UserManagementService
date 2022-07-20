@@ -7,6 +7,8 @@ namespace Formularies.UserManagementService.Api.Helper
         {
             CreateMap<Infrastructure.Entities.Role, Core.Models.Role>().ReverseMap();
             CreateMap<Infrastructure.Entities.User, Core.Models.User>().ReverseMap();
+            CreateMap<Infrastructure.Entities.RefreshToken, Core.Models.RefreshToken>().ReverseMap();
+            CreateMap<Core.Models.User, Core.Response.AuthenticateResponse>();
         }
     }
 }
