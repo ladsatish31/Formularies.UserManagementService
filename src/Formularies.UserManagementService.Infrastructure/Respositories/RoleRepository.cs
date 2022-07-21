@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using AutoWrapper.Wrappers;
 using Formularies.UserManagementService.Core.Interfaces.Repositories;
 using Formularies.UserManagementService.Core.Models;
+using Formularies.UserManagementService.Core.Request;
 using Formularies.UserManagementService.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -21,8 +23,10 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
-        public async Task<Role> CreateRole(Role role)
+        public async Task<RoleRequest> CreateRole(RoleRequest role)
         {
+            if (_dbcontext.Roles.Any(x => x.RoleName == role.RoleName))
+                throw new ApiException($"Role '{role.RoleName}' is already registered");
             var dbRole=_mapper.Map<Entities.Role>(role);
             await _dbcontext.Roles.AddAsync(dbRole);
             await _dbcontext.SaveChangesAsync();
@@ -35,9 +39,10 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
            var roleToDelete=await _dbcontext.Roles.FindAsync(id);
             if(roleToDelete == null)
             {
-                return false;
+                throw new ApiException($"Role id '{id}' not found",404);
+
             }
-            if(roleToDelete != null)
+            if (roleToDelete != null)
             {
                 _dbcontext.Entry(roleToDelete).State= EntityState.Modified;
                 _dbcontext.Roles.Remove(roleToDelete);
@@ -47,12 +52,22 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             return false;
         }
 
-        public async Task<IEnumerable<Role>> GetAllRoles()
+        //public async Task<IEnumerable<Role>> GetAllRoles()
+        //{
+        //    var dbRoles = await _dbcontext.Roles.ToListAsync().ConfigureAwait(false);
+        //    if (dbRoles.Count>0)
+        //    {
+        //        return _mapper.Map<IEnumerable<Role>>(dbRoles);
+        //    }
+        //    return null;
+        //}
+
+        public IQueryable<Role> GetAllRoles()
         {
-            var dbRoles = await _dbcontext.Roles.ToListAsync().ConfigureAwait(false);
-            if (dbRoles != null)
+            var dbRoles = _dbcontext.Roles.AsQueryable();            
+            if (dbRoles!=null)
             {
-                return _mapper.Map<IEnumerable<Role>>(dbRoles);
+                return _mapper.Map<IEnumerable<Role>>(dbRoles).AsQueryable();
             }
             return null;
         }
@@ -64,20 +79,19 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             {
                 return _mapper.Map<Role>(dbRole);
             }
-            return null;
+            else
+            throw new ApiException($"Role id '{id}' not found", 404);
         }
 
-        public async Task<bool> UpdateRole(int id, Role role)
+        public async Task<bool> UpdateRole(int id, RoleRequest role)
         {
             var roleToUpdate=await _dbcontext.Roles.FindAsync(id);
             if(roleToUpdate == null)
             {
-                return false;
+                throw new ApiException($"Role id '{id}' not found", 404);
             }
-            if (roleToUpdate == null||roleToUpdate.RoleId!=id)
-            {
-                return false;
-            }
+            if (roleToUpdate.RoleName != role.RoleName && _dbcontext.Roles.Any(x => x.RoleName == role.RoleName))
+                throw new ApiException($"Role '{role.RoleName}' is already taken");
             _dbcontext.Entry(roleToUpdate).State= EntityState.Modified;
             roleToUpdate.RoleName = role.RoleName;
             roleToUpdate.RoleDescription = role.RoleDescription;           

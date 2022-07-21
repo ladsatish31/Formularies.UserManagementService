@@ -73,10 +73,10 @@ namespace Formularies.UserManagementService.Api
                 throw new ArgumentNullException(nameof(app));
             }
 
-            app.UseSwagger(options => options.RouteTemplate = $"swagger/{ApiConstants.ServiceName}/{{documentName}}/swagger.json");
+            app.UseSwagger(options => options.RouteTemplate = $"swagger/{{documentName}}/swagger.json");
             app.UseSwaggerUI(options =>
             {
-                options.RoutePrefix = $"swagger/{ApiConstants.ServiceName}";
+                options.RoutePrefix = $"swagger";
 
                 foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
                 {
@@ -94,7 +94,7 @@ namespace Formularies.UserManagementService.Api
             string serviceDescription = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "ServiceDescription.md"));
             var info = new OpenApiInfo
             {
-                Title = $"{ApiConstants.FriendlyServiceName} API {description.ApiVersion}",
+                Title = $" API {description.ApiVersion}",
                 Version = description.ApiVersion.ToString(),
                 Description = serviceDescription
             };

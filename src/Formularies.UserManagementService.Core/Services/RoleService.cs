@@ -1,10 +1,13 @@
-﻿using Formularies.UserManagementService.Core.Interfaces.Repositories;
+﻿using AutoWrapper.Wrappers;
+using Formularies.UserManagementService.Core.Interfaces.Repositories;
 using Formularies.UserManagementService.Core.Interfaces.Services;
 using Formularies.UserManagementService.Core.Models;
+using Formularies.UserManagementService.Core.Request;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Formularies.UserManagementService.Core.Services
 {
@@ -17,7 +20,7 @@ namespace Formularies.UserManagementService.Core.Services
             _roleRepository = roleRepository ?? throw new ArgumentNullException(nameof(roleRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
-        public async Task<Role> CreateRole(Role role)
+        public async Task<RoleRequest> CreateRole(RoleRequest role)
         {
             try
             {
@@ -43,11 +46,38 @@ namespace Formularies.UserManagementService.Core.Services
             }
         }
 
-        public async Task<IEnumerable<Role>> GetAllRoles()
+        public IEnumerable<Role> GetAllRoles(SearchFilter searchFilter)
         {
             try
             {
-                return await _roleRepository.GetAllRoles();
+                var allRoles = _roleRepository.GetAllRoles();
+               
+                if (!string.IsNullOrEmpty(searchFilter.Search))
+                {
+                    allRoles = allRoles.Where(r => r.RoleName.Contains(searchFilter.Search) || r.RoleDescription.Contains(searchFilter.Search));
+                }
+
+                //Default sort by role
+                allRoles = allRoles.OrderBy(hh => hh.RoleId);
+                if (!string.IsNullOrEmpty(searchFilter.SortBy))
+                {
+                    switch (searchFilter.SortBy)
+                    {
+                        case "id_asc": allRoles = allRoles.OrderBy(hh => hh.RoleId); break;
+                        case "id_desc": allRoles = allRoles.OrderByDescending(hh => hh.RoleId); break;
+                        case "name_asc": allRoles = allRoles.OrderBy(hh => hh.RoleName); break;
+                        case "name_desc": allRoles = allRoles.OrderByDescending(hh => hh.RoleName); break;
+                        case "des_asc": allRoles = allRoles.OrderBy(hh => hh.RoleDescription); break;
+                        case "des_desc": allRoles = allRoles.OrderByDescending(hh => hh.RoleDescription); break;
+                    }
+                }                
+                return allRoles.Select(role => new Role
+                {
+                    RoleId = role.RoleId,
+                    RoleName = role.RoleName,
+                    RoleDescription = role.RoleDescription                    
+                }).ToList();
+                
             }
             catch (System.Exception ex)
             {
@@ -61,6 +91,7 @@ namespace Formularies.UserManagementService.Core.Services
             try
             {
                 return await _roleRepository.GetRoleById(id);
+               
             }
             catch (System.Exception ex)
             {
@@ -69,7 +100,7 @@ namespace Formularies.UserManagementService.Core.Services
             }
         }
 
-        public async Task<bool> UpdateRole(int id, Role role)
+        public async Task<bool> UpdateRole(int id, RoleRequest role)
         {
             try
             {

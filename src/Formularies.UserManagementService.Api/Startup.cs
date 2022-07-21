@@ -23,6 +23,8 @@ using System.Threading.Tasks;
 using Newtonsoft;
 using Formularies.UserManagementService.Core.Constants;
 using System.Text;
+using AutoWrapper;
+using Microsoft.AspNetCore.Http;
 
 namespace Formularies.UserManagementService.Api
 {
@@ -49,6 +51,14 @@ namespace Formularies.UserManagementService.Api
             //{
             //    options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
             //});
+            services.AddHttpContextAccessor();
+            services.AddSingleton<IUriService>(o =>
+            {
+                var accessor = o.GetRequiredService<IHttpContextAccessor>();
+                var request = accessor.HttpContext.Request;
+                var uri = string.Concat(request.Scheme, "://", request.Host.ToUriComponent());
+                return new UriService(uri);
+            });
             services.AddControllers()
             .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
             services.ConfigureCors();
@@ -67,16 +77,16 @@ namespace Formularies.UserManagementService.Api
                 app.UseDeveloperExceptionPage();
                 //app.HttpCodeAndLogMiddleware();
             }
-            else
-            {
-                app.HttpCodeAndLogMiddleware();
-                app.UseHsts();
-            }
+            //else
+            //{
+            //    app.HttpCodeAndLogMiddleware();
+            //    app.UseHsts();
+            //}
             app.ConfigureSwagger(provider);
             // custom jwt auth middleware
             app.UseMiddleware<JwtMiddleware>();
             app.UseHttpsRedirection();
-
+            app.UseApiResponseAndExceptionWrapper(new AutoWrapperOptions { ShowStatusCode = true, UseCustomSchema = true });
             app.UseRouting();
 
             app.UseAuthentication();

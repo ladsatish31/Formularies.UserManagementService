@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using AutoWrapper.Wrappers;
 using Formularies.UserManagementService.Core.Interfaces.Repositories;
 using Formularies.UserManagementService.Core.Models;
+using Formularies.UserManagementService.Core.Request;
 using Formularies.UserManagementService.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -20,8 +22,10 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             _dbcontext = dbcontext ?? throw new ArgumentNullException(nameof(dbcontext));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
-        public async Task<User> CreateUser(User user)
+        public async Task<UserCreateRequest> CreateUser(UserCreateRequest user)
         {
+            if (_dbcontext.Users.Any(x => x.Email == user.Email))
+                throw new ApiException($"Email '{user.Email}' is already registered");
             var userTocreate = _mapper.Map<Entities.User>(user);
             await _dbcontext.Users.AddAsync(userTocreate);
             await _dbcontext.SaveChangesAsync();
@@ -34,7 +38,7 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             var userToDelete = await _dbcontext.Users.FindAsync(id);
             if (userToDelete == null)
             {
-                return false;
+                throw new ApiException($"User id '{id}' not found", 404);
             }
             if (userToDelete != null)
             {
@@ -46,12 +50,21 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             return false;
         }
 
-        public async Task<IEnumerable<User>> GetAllUsers()
+        //public async Task<IEnumerable<User>> GetAllUsers()
+        //{
+        //    var dbUsers = await _dbcontext.Users.ToListAsync().ConfigureAwait(false);
+        //    if (dbUsers.Count > 0)
+        //    {
+        //        return _mapper.Map<IEnumerable<User>>(dbUsers);
+        //    }
+        //    return null;
+        //}
+        public IQueryable<User> GetAllUsers()
         {
-            var dbUsers = await _dbcontext.Users.ToListAsync().ConfigureAwait(false);
-            if (dbUsers.Count > 0)
+            var dbUsers = _dbcontext.Users.AsQueryable();
+            if (dbUsers != null)
             {
-                return _mapper.Map<IEnumerable<User>>(dbUsers);
+                return _mapper.Map<IEnumerable<User>>(dbUsers).AsQueryable();
             }
             return null;
         }
@@ -63,21 +76,18 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             {
                 return _mapper.Map<User>(dbUser);
             }
-            return null;
+            throw new ApiException($"User id '{id}' not found", 404);
         }
 
-        public async Task<bool> UpdateUser(Guid id, User user)
+        public async Task<bool> UpdateUser(Guid id, UserUpdateRequest user)
         {
             var updatedUser = _mapper.Map<Entities.User>(user);
             var userToUpdate = await _dbcontext.Users.FindAsync(id);
             if (userToUpdate == null)
             {
-                return false;
+                throw new ApiException($"User id '{id}' not found", 404);
             }
-            if (userToUpdate == null || userToUpdate.UserId != id)
-            {
-                return false;
-            }
+            
             _dbcontext.Entry(userToUpdate).State = EntityState.Modified;           
             userToUpdate.Name = updatedUser.Name;
             userToUpdate.Email = updatedUser.Email;
@@ -113,6 +123,16 @@ namespace Formularies.UserManagementService.Infrastructure.Respositories
             var dbUser = await _dbcontext.Users.SingleOrDefaultAsync(x =>
                 x.ResetToken == token &&
                 x.ResetTokenExpiryDate > DateTime.Now);
+            if (dbUser != null)
+            {
+                return _mapper.Map<User>(dbUser);
+            }
+            return null;
+        }
+
+        public async Task<User> GetUserByRefreshToken(string token)
+        {
+            var dbUser = await _dbcontext.Users.SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == token));
             if (dbUser != null)
             {
                 return _mapper.Map<User>(dbUser);

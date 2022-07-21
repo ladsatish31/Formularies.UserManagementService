@@ -1,26 +1,33 @@
-﻿using Formularies.UserManagementService.Core.Interfaces.Services;
+﻿using AutoWrapper.Extensions;
+using AutoWrapper.Wrappers;
+using Formularies.UserManagementService.Api.Helper;
+using Formularies.UserManagementService.Core.Helpers;
+using Formularies.UserManagementService.Core.Interfaces.Services;
 using Formularies.UserManagementService.Core.Models;
+using Formularies.UserManagementService.Core.Request;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-//using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Formularies.UserManagementService.Api.V2.Controllers
 {
     [Produces("application/json")]
-    [Route("api/" + ApiConstants.ServiceName + "/v{api-version:apiVersion}/[controller]")]
+    [Route("api/v{api-version:apiVersion}/[controller]")]
     [ApiVersion("2.0")]
     [ApiController]
     public class RolesController : ControllerBase
     {
         private readonly IRoleService _roleService;
+        public new User User => (User)HttpContext.Items["User"];
+        private readonly IUriService _uriService;
 
-        public RolesController(IRoleService roleService)
+        public RolesController(IRoleService roleService, IUriService uriService)
         {
             _roleService = roleService ?? throw new ArgumentNullException(nameof(roleService));
+            _uriService = uriService;
         }
 
         /// <summary>
@@ -28,17 +35,36 @@ namespace Formularies.UserManagementService.Api.V2.Controllers
         /// </summary>
         /// <returns>Roles</returns>
         /// <remarks>
-        /// Tables used => Role
+        /// Tables used => Roles
         /// </remarks>
-        [HttpGet(Name = "GetRoles")]
+        //[HttpGet(Name = "GetRoles")]
+        //[ProducesResponseType(StatusCodes.Status200OK)]
+        //[ProducesResponseType(StatusCodes.Status404NotFound)]
+        //[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        //[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        //public async Task<ActionResult<IEnumerable<Role>>> GetRoles()
+        //{
+        //    var response = await _roleService.GetAllRoles().ConfigureAwait(false);
+        //    return response != null ? Ok(response) : NotFound();
+        //}
+
+        [HttpGet(Name = "GetAllRoles")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<Role>>> GetRoles()
+        public ActionResult<IEnumerable<Role>> GetAllRoles([FromQuery] PaginationFilter pageFilter, [FromQuery] SearchFilter reportFilter)
         {
-            var response = await _roleService.GetAllRoles().ConfigureAwait(false);
-            return response != null ? Ok(response) : NotFound();
+            var route = Request.Path.Value;
+            var response = _roleService.GetAllRoles(reportFilter);
+            var validFilter = new PaginationFilter(pageFilter.PageNumber, pageFilter.PageSize);
+            var pagedData = response
+               .Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
+               .Take(validFilter.PageSize)
+               .ToList();
+            var totalRecords = response.Count();
+            var pagedReponse = PaginationHelper.CreatePagedReponse<Role>(pagedData, validFilter, totalRecords, _uriService, route);
+            return pagedReponse != null ? Ok(pagedReponse) : NotFound();
         }
 
         /// <summary>
@@ -47,7 +73,7 @@ namespace Formularies.UserManagementService.Api.V2.Controllers
         /// <param name="id"></param>
         /// <returns>Role</returns>
         /// <remarks>
-        /// Tables used => Role
+        /// Tables used => Roles
         /// </remarks>
         [HttpGet("{id}", Name = "GetRoleById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -59,10 +85,10 @@ namespace Formularies.UserManagementService.Api.V2.Controllers
         {
             if (id <= 0)
             {
-                return BadRequest();
+                throw new ApiException(ModelState.AllErrors());
             }
             var response = await _roleService.GetRoleById(id).ConfigureAwait(false);
-            return response != null ? Ok(response) : NotFound();
+            return response != null ? Ok(new ApiResponse(response)) : NotFound();
 
         }
 
@@ -72,7 +98,7 @@ namespace Formularies.UserManagementService.Api.V2.Controllers
         /// <param name="role"></param>
         /// <returns>Role</returns>
         /// <remarks>
-        /// Tables used => Role
+        /// Tables used => Roles
         /// </remarks>
         /// <response code="201">Returns the newly created item</response>
         /// <response code="400">If the item is null</response>
@@ -83,11 +109,11 @@ namespace Formularies.UserManagementService.Api.V2.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<Role>> CreateRole(Role role)
+        public async Task<ActionResult<RoleRequest>> CreateRole(RoleRequest role)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest();
+                throw new ApiException(ModelState.AllErrors());
             }
             var response = await _roleService.CreateRole(role).ConfigureAwait(false);
             return CreatedAtRoute(nameof(GetRoleById), new { id = response.RoleId }, response);
@@ -99,7 +125,7 @@ namespace Formularies.UserManagementService.Api.V2.Controllers
         /// <param name="id"></param>
         /// <returns>true/false</returns>
         /// <remarks>
-        /// Tables used => Role
+        /// Tables used => Roles
         /// </remarks>
         [HttpDelete("{id}", Name = "DeleteRole")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -111,7 +137,7 @@ namespace Formularies.UserManagementService.Api.V2.Controllers
         {
             if (id <= 0)
             {
-                return BadRequest();
+                throw new ApiException(ModelState.AllErrors());
             }
             var response = await _roleService.DeleteRole(id).ConfigureAwait(false);
             return response ? NoContent() : NotFound();
@@ -124,7 +150,7 @@ namespace Formularies.UserManagementService.Api.V2.Controllers
         /// <param name="role"></param>
         /// <returns>true/false</returns>
         /// <remarks>
-        /// Tables used => Role
+        /// Tables used => Roles
         /// </remarks>
         [HttpPut("{id}", Name = "UpdateRole")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -133,11 +159,11 @@ namespace Formularies.UserManagementService.Api.V2.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<bool>> UpdateRole(int id, Role role)
+        public async Task<ActionResult<bool>> UpdateRole(int id, RoleRequest role)
         {
             if (!ModelState.IsValid || id <= 0)
             {
-                return BadRequest();
+                throw new ApiException(ModelState.AllErrors());
             }
             var response = await _roleService.UpdateRole(id, role).ConfigureAwait(false);
             return response ? Ok(response) : NotFound();

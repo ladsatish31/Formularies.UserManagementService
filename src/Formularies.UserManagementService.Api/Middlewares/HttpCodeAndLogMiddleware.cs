@@ -1,5 +1,4 @@
-﻿using Formularies.UserManagementService.Core.Exception;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -51,14 +50,14 @@ namespace Formularies.UserManagementService.Api.Middlewares
                         httpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                         await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "BadRequest Exception!" + e.Message);
                         break;
-                    case NotFoundException e:
-                        httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "Not Found!" + e.Message);
-                        break;
-                    case ValidationException e:
-                        httpContext.Response.StatusCode = (int)HttpStatusCode.UnprocessableEntity;
-                        await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "Validation Exception!" + e.Message);
-                        break;
+                    //case NotFoundException e:
+                    //    httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    //    await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "Not Found!" + e.Message);
+                    //    break;
+                    //case ValidationException e:
+                    //    httpContext.Response.StatusCode = (int)HttpStatusCode.UnprocessableEntity;
+                    //    await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "Validation Exception!" + e.Message);
+                    //    break;
                     case UnauthorizedAccessException e:
                         httpContext.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                         await WriteAndLogResponseAsync(exception, httpContext, HttpStatusCode.BadRequest, LogLevel.Error, "UnauthorizedAccessException!" + e.Message);
